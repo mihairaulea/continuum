@@ -65,7 +65,7 @@ public class ContinuumTest {
     @Test
     public void addingMultipleContinuumObjectsShouldBuildAnRTree() {
         try(Transaction tx = db.beginTx()) {
-            insertRandomContinuumNodes(100);
+            insertRandomContinuumNodes(100,DateTime.now(), DateTime.now().plusDays(1));
             ResourceIterable<Node> resourceIterable = db.getAllNodes();
             long noOfNodesWithBbox = resourceIterable.stream().filter(t -> t.hasProperty("bbox")).count();
             // r tree refference, plus the nodes i created
@@ -75,14 +75,16 @@ public class ContinuumTest {
     }
 
     @Test
-    public void testDataRetrieval() {
+    public void shouldRetreiveAllDataFromEnvelope() {
         try(Transaction tx = db.beginTx()) {
-            insertRandomContinuumNodes(100);
+            // create
             Envelope envelope = new Envelope(15.0, 16.0, 56.0, 57.0);
+            insertRandomContinuumNodesInEnvelope(100, envelope,DateTime.now(), DateTime.now().plusDays(1));
+
+            // query
             Geometry toSearchIn = continuum.createOrRetrieveContinuumLayer().getGeometryFactory().toGeometry(envelope);
             DateTime startDate = DateTime.now();
             DateTime endDate = DateTime.now().plusHours(4);
-            insertRandomContinuumNodesInEnvelope(100, envelope);
             List<Node> retrievedNodes = continuum.getContinuumNodes( toSearchIn, startDate, endDate );
             // all nodes are generated in the envelope, and in a time contained within the search time
             Assert.isTrue(retrievedNodes.size() == 100);
@@ -90,19 +92,88 @@ public class ContinuumTest {
         }
     }
 
-    private void insertRandomContinuumNodes(int noOfNodes) {
-        for(int i=0;i<noOfNodes;i++) {
-            Node continuumNode = db.createNode(Label.label("SimpleTest"));
-            continuum.addContinuumCapabilitiesToNode(continuumNode, TestUtils.getRandomLat(), TestUtils.getRandomLon(), DateTime.now(), DateTime.now().plusDays(1) );
+    @Test
+    public void shouldRetrievePartialDataFromEnvelope() {
+        try(Transaction tx = db.beginTx()) {
+            // create
+            Envelope envelope = new Envelope(15.0, 16.0, 56.0, 57.0);
+            insertRandomContinuumNodesInEnvelope(50, envelope, DateTime.now(), DateTime.now().plusDays(1));
+            insertRandomContinuumNodesOutsideEnvelope(50, envelope, DateTime.now(), DateTime.now().plusDays(1));
+
+            // query
+            DateTime startDate = DateTime.now().plusHours(1);
+            DateTime endDate = DateTime.now().plusHours(4);
+            Geometry toSearchIn = continuum.createOrRetrieveContinuumLayer().getGeometryFactory().toGeometry(envelope);
+            List<Node> retrievedNodes = continuum.getContinuumNodes( toSearchIn, startDate, endDate );
+
+            // assert
+            // half of the nodes are generated in the envelope, half outside, and in a time contained within the search time
+            Assert.isTrue(retrievedNodes.size() == 50);
+            tx.success();
         }
     }
 
-    private void insertRandomContinuumNodesInEnvelope(int noOfNodes, Envelope envelope) {
+    @Test
+    public void shouldNotRetrieveAnyDataFromEnvelope() {
+        try(Transaction tx = db.beginTx()) {
+            // create
+            Envelope envelope = new Envelope(15.0, 16.0, 56.0, 57.0);
+            insertRandomContinuumNodesOutsideEnvelope(100, envelope, DateTime.now(), DateTime.now().plusDays(1));
+
+            // query
+            DateTime startDate = DateTime.now().plusHours(1);
+            DateTime endDate = DateTime.now().plusHours(4);
+            Geometry toSearchIn = continuum.createOrRetrieveContinuumLayer().getGeometryFactory().toGeometry(envelope);
+            List<Node> retrievedNodes = continuum.getContinuumNodes( toSearchIn, startDate, endDate );
+
+            // assert
+            // half of the nodes are generated in the envelope, half outside, and in a time contained within the search time
+            Assert.isTrue(retrievedNodes.size() == 0);
+            tx.success();
+        }
+    }
+
+
+    @Test
+    public void shouldRetreiveAllDataInTimeframe() {
+
+    }
+
+    @Test
+    public void shouldRetrievePartialDataInTimeframe() {
+
+    }
+
+    @Test
+    public void shouldNotRetrieveAnyDataInTimeframe() {
+
+    }
+
+
+    private void insertRandomContinuumNodes(int noOfNodes, DateTime startDate, DateTime endDate) {
+        for(int i=0;i<noOfNodes;i++) {
+            Node continuumNode = db.createNode(Label.label("SimpleTest"));
+            continuum.addContinuumCapabilitiesToNode(continuumNode, TestUtils.getRandomLat(), TestUtils.getRandomLon(), startDate, endDate );
+        }
+    }
+
+    private void insertRandomContinuumNodesInEnvelope(int noOfNodes, Envelope envelope, DateTime startDate, DateTime endDate) {
         for(int i=0;i<noOfNodes;i++) {
             Node continuumNode = db.createNode(Label.label("EnvelopeTest"));
             double lat = TestUtils.getRandomLatInEnvelope(envelope);
             double lon = TestUtils.getRandomLonInEnvelope(envelope);
             Assert.isTrue(envelope.contains(lon,lat));
+            //System.out.println(lat+"  :  "+ lon + " " + envelope.contains(lat,lon));
+            continuum.addContinuumCapabilitiesToNode(continuumNode, lat, lon, DateTime.now(), DateTime.now().plusDays(1) );
+        }
+    }
+
+    private void insertRandomContinuumNodesOutsideEnvelope(int noOfNodes, Envelope envelope, DateTime startDate, DateTime endDate) {
+        for(int i=0;i<noOfNodes;i++) {
+            Node continuumNode = db.createNode(Label.label("EnvelopeTest"));
+            double lat = TestUtils.getRandomLatOutsideEnvelope(envelope);
+            double lon = TestUtils.getRandomLonOutsideEnvelope(envelope);
+            Assert.isTrue(!envelope.contains(lon,lat));
             //System.out.println(lat+"  :  "+ lon + " " + envelope.contains(lat,lon));
             continuum.addContinuumCapabilitiesToNode(continuumNode, lat, lon, DateTime.now(), DateTime.now().plusDays(1) );
         }
