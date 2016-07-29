@@ -17,7 +17,8 @@ import java.util.TimeZone;
 import java.util.stream.Collectors;
 
 /**
- *
+ * Can i use Gradoop for the intersection of time and space?
+ * https://github.com/dbs-leipzig/gradoop
  */
 public class Continuum {
 
@@ -34,6 +35,9 @@ public class Continuum {
         timedEvents = new TimeTreeBackedEvents(timeTree);
     }
 
+    // should accomodate case where event is on a single date
+    // should throw error if startTime > endTime
+    // should throw error if lat, lon are not valid
     public Node addContinuumCapabilitiesToNode(Node node, double lat, double lon, DateTime startTime, DateTime endTime) {
         try (Transaction txContinuum = db.beginTx()) {
             node.addLabel(Label.label("Continuum"));
@@ -53,6 +57,8 @@ public class Continuum {
     }
 
     // envelope = new Envelope(15.0, 16.0, 56.0, 57.0)
+    // should throw error if startTime < endTime
+    // should throw error if Geometry is not valid
     public List<Node> getContinuumNodes(Geometry geometryToSearchIn, DateTime startTime, DateTime endTime) {
         List<Node> result = null;
         Layer layer = createOrRetrieveContinuumLayer();

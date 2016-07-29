@@ -136,17 +136,66 @@ public class ContinuumTest {
 
     @Test
     public void shouldRetreiveAllDataInTimeframe() {
+        try(Transaction tx = db.beginTx()) {
+            // create - make space not an issue
+            Envelope envelope = new Envelope(-90, 90, -180, 180);
+            insertRandomContinuumNodes(100, DateTime.now(), DateTime.now().plusDays(1));
 
+            // query
+            DateTime startDate = DateTime.now().plusHours(1);
+            DateTime endDate = DateTime.now().plusHours(4);
+            Geometry toSearchIn = continuum.createOrRetrieveContinuumLayer().getGeometryFactory().toGeometry(envelope);
+            List<Node> retrievedNodes = continuum.getContinuumNodes( toSearchIn, startDate, endDate );
+
+            // assert
+            // half of the nodes are generated in the envelope, half outside, and in a time contained within the search time
+            Assert.isTrue(retrievedNodes.size() == 100);
+            tx.success();
+        }
     }
 
     @Test
     public void shouldRetrievePartialDataInTimeframe() {
+        try(Transaction tx = db.beginTx()) {
+            // create - make space not an issue
+            Envelope envelope = new Envelope(-90, 90, -180, 180);
+            // these are the nodes that should be retrieved
+            insertRandomContinuumNodes(50, DateTime.now(), DateTime.now().plusDays(1));
+            // these are the nodes that should not be retrieved
+            insertRandomContinuumNodes(50, DateTime.now().minusDays(3), DateTime.now().minusDays(3));
 
+            // query
+            DateTime startDate = DateTime.now().plusHours(1);
+            DateTime endDate = DateTime.now().plusHours(4);
+            Geometry toSearchIn = continuum.createOrRetrieveContinuumLayer().getGeometryFactory().toGeometry(envelope);
+            List<Node> retrievedNodes = continuum.getContinuumNodes( toSearchIn, startDate, endDate );
+
+            // assert
+            // half of the nodes are generated in the envelope, half outside, and in a time contained within the search time
+            Assert.isTrue(retrievedNodes.size() == 100);
+            tx.success();
+        }
     }
 
     @Test
     public void shouldNotRetrieveAnyDataInTimeframe() {
+        try(Transaction tx = db.beginTx()) {
+            // create - make space not an issue
+            Envelope envelope = new Envelope(-90, 90, -180, 180);
+            // these are the nodes that should not be retrieved
+            insertRandomContinuumNodes(100, DateTime.now().minusDays(3), DateTime.now().minusDays(3));
 
+            // query
+            DateTime startDate = DateTime.now().plusHours(1);
+            DateTime endDate = DateTime.now().plusHours(4);
+            Geometry toSearchIn = continuum.createOrRetrieveContinuumLayer().getGeometryFactory().toGeometry(envelope);
+            List<Node> retrievedNodes = continuum.getContinuumNodes( toSearchIn, startDate, endDate );
+
+            // assert
+            // half of the nodes are generated in the envelope, half outside, and in a time contained within the search time
+            Assert.isTrue(retrievedNodes.size() == 0);
+            tx.success();
+        }
     }
 
 
