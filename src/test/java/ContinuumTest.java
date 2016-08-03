@@ -1,8 +1,5 @@
 import com.graphaware.module.timetree.TimeTree;
 import com.graphaware.module.timetree.TimedEvents;
-import com.graphaware.module.timetree.domain.Event;
-import com.graphaware.module.timetree.domain.TimeInstant;
-import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import org.joda.time.DateTime;
@@ -10,20 +7,13 @@ import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.neo4j.gis.spatial.EditableLayer;
-import org.neo4j.gis.spatial.EditableLayerImpl;
-import org.neo4j.gis.spatial.SpatialDatabaseRecord;
 import org.neo4j.gis.spatial.SpatialDatabaseService;
-import org.neo4j.gis.spatial.encoders.SimplePointEncoder;
-import org.neo4j.gis.spatial.pipes.GeoPipeline;
-import org.neo4j.gis.spatial.pipes.processing.GeometryType;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.springframework.util.Assert;
 
 import java.io.File;
-import java.util.Iterator;
 import java.util.List;
 import java.util.TimeZone;
 
@@ -38,11 +28,12 @@ public class ContinuumTest {
     private static final DateTimeZone UTC = DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"));
     private TimedEvents timedEvents;
     private Continuum continuum;
+    private boolean permantent = true;
 
     @Before
     public void setUp() {
         // new GraphDatabaseFactory().newEmbeddedDatabase(new File("/Users/user/Documents/Neo4j/default.graphdb") );
-        db =  new TestGraphDatabaseFactory().newImpermanentDatabase();
+        db =  permantent ? new GraphDatabaseFactory().newEmbeddedDatabase(new File("/Users/user/Documents/Neo4j/default.graphdb") ) : new TestGraphDatabaseFactory().newImpermanentDatabase() ;//
         continuum = new Continuum(db);
     }
 
@@ -62,6 +53,14 @@ public class ContinuumTest {
     // getObjectsAvailable(GeoPosition userPosition, int radius)
 
     // how does importing a shapefile work? what does it do?
+    @Test
+    public void addingOneContinuumNode() {
+        try(Transaction tx = db.beginTx()) {
+            insertRandomContinuumNodes(1, DateTime.now(),DateTime.now().plusHours(2));
+            tx.success();
+        }
+    }
+
     @Test
     public void addingMultipleContinuumObjectsShouldBuildAnRTree() {
         try(Transaction tx = db.beginTx()) {
